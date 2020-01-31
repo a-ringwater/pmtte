@@ -1,4 +1,5 @@
 import { buffs } from '../data/buffs';
+import { sounds } from '../data/sounds';
 import toastr from 'toastr';
 
 export default class Round {
@@ -36,14 +37,17 @@ export default class Round {
         if (this.currentRound > 1) {
             this.players[this.currentPlayer].applyBuff();
 
-            let sound = new Audio();
             if (this.players[this.currentPlayer].buff.bonus) {
-                sound.src = window.URL.createObjectURL('../sounds/buff.mp3');
+                sounds.buff.play();
             }
             else {
-                sound.src = window.URL.createObjectURL('../sounds/debuff.mp3');
+                sounds.debuff.play();
             }
-            sound.play();
+        }
+
+        if (!this.players[this.currentPlayer].canPlay) {
+            this.endTurn();
+            return;
         }
 
         this.players[this.currentPlayer].elPush.addEventListener('mouseup', this.endTurn.bind(this));
@@ -53,6 +57,10 @@ export default class Round {
         if (this.players[this.currentPlayer] === undefined) return;
 
         this.players[this.currentPlayer].elPush.style.display = 'none';
+
+        this.players[this.currentPlayer].pointsLoad(this.maxPlayerScore);
+
+
         if (this.players[++this.currentPlayer] !== undefined) {
             this.turn();
         } else {
@@ -76,6 +84,45 @@ export default class Round {
         if (winner !== null) {
             this.elConsole.innerHTML = '<h2>' + winner.name + ' won the game!<br>See you next time assholes.</h2><button class="reload btn btn--bordered">New game!</button>';
 
+            winner.animate('bounce', '1s', 'linear', '0s', 'infinite');
+
+            function compare(a, b) {
+                // Use toUpperCase() to ignore character casing
+                const scoreA = a.score;
+                const scoreB = b.score;
+
+                let comparison = 0;
+                if (scoreA < scoreB) {
+                    comparison = 1;
+                } else if (scoreA > scoreB) {
+                    comparison = -1;
+                }
+                return comparison;
+            }
+
+            let ranking = this.players.sort(compare);
+            console.log(ranking);
+            for (let rank = 0; rank < ranking.length; ++rank) {
+                let suffix = '';
+
+                switch (rank) {
+                    case 0:
+                        suffix = 'st';
+                        break;
+                    case 1:
+                        suffix = 'nd';
+                        break;
+                    case 2:
+                        suffix = 'rd';
+                        break;
+                    case 3:
+                        suffix = 'th';
+                        break;
+                }
+
+                ranking[rank].elScore.parentNode.innerHTML = (rank + 1) + suffix;
+            }
+
             this.elConsole.querySelector('.reload').addEventListener('click', function () {
                 document.location.reload();
             });
@@ -89,7 +136,7 @@ export default class Round {
                 toastr.clear();
 
                 // Ajoute un buff ou un debuff sur chaque joueur
-                for (let player = 0; player < self.players.length; ++player){
+                for (let player = 0; player < self.players.length; ++player) {
                     console.log('player buff : ' + player);
                     let currentBuff = Math.round(Math.random() * (buffs.length - 1));
                     self.players[player].buff = buffs[currentBuff];
@@ -99,5 +146,8 @@ export default class Round {
                 new Round(self.players, self.currentRound);
             });
         }
+
+
+
     }
 }
